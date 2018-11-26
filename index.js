@@ -1,43 +1,39 @@
-const express = require('express');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const config = require('config');
+const cookieSession = require('cookie-session');
+const express = require('express');
+const mongoose = require('mongoose');
+const config = require('config')
+require('./services/passport');
+
+const home = require('./routes/home');
+const auth = require('./routes/auth');
+const users = require('./routes/users');
 
 const app = express();
 
-passport.use(new GoogleStrategy(
-    {
-        clientID: config.auth.google.clientID,
-        clientSecret: config.auth.google.clientSecret,
-        callbackURL: '/auth/google/callback'
-    },
-    (accessToken, refreshToken, profile, done) => {
-        console.log(`accessToken => ${accessToken}`);
-        console.log(`refreshToken => ${refreshToken}`);
-        console.log(`profile =>`, profile);
-        console.log(`done => ${done}`);
-    }
-));
+mongoose.connect(config.DB.mongoURI, {useNewUrlParser:true})
+    .then(() => {
+        console.log("connected to mongo DB")
+    }) 
+    .catch((error) => console.error(error.message));
 
-app.get('/', (req,res)=>{
-    console.log(config.auth.google.clientID);
-    res.send({ happy: 'hacking'});
-});
+// NPM middleware
+app.use(
+    cookieSession({         // req.session
+        name: 'MERN cookie',
+        maxAge: (30 * 24 * 60 * 60 * 1000),
+        keys: [config.cookieKey]
+    })
+);    
 
-app.get(
-    '/auth/google',     // user req toss
-    passport.authenticate('google', { scope: ['profile', 'email']}),
-    (req,res) => {
-        console.log(config.auth.google.clientID);
-        res.send({happy: 'hacking'});
-    }
-)
+app.use(passport.initialize());
+app.use(passport.session());     // req.user == <USER INSTANCE>
 
-app.get(
-    '/auth/google/callback',    // req+code => google => real user data
-    passport.authenticate('google'),    // can not get /auth/google/callback
+// Routes
+app.use(home);
+app.use('/auth/google', auth);
+app.use('/users',users);
 
-)
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
