@@ -32,7 +32,7 @@ app.use(passport.session());     // req.user == <USER INSTANCE>
 // Routes
 app.use(home);
 app.use('/auth/google', auth);
-app.use('/users',users);
+app.use('/api/users',users);
 
 
 const PORT = process.env.PORT || 5000;
